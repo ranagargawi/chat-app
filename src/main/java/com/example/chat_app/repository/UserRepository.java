@@ -5,8 +5,9 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 
+// src/main/java/com/example/chat_app/repository/UserRepository.java
 @Repository
-public interface UserRepository extends MongoRepository<User, Integer> {
-    User findByEmailAndPassword(String email, String password);
-    User findByEmail(String email);
+public interface UserRepository extends MongoRepository<User, String> {
+    User findByUserEmailAndUserPassword(String userEmail, String userPassword);
+    User findByUserEmail(String userEmail);
 }

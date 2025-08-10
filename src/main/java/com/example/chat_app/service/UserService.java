@@ -24,12 +24,10 @@ public class UserService {
 
         boolean flag = false;
 
-        User user = userRepository.findByEmailAndPassword(userEmail, userPassword);
-
-        if (user != null && user.getUserEmail().equals(userEmail) && user.getUserPassword().equals(userPassword)) {
-            flag = true;
-        }
-
+        User user = userRepository.findByUserEmailAndUserPassword(userEmail, userPassword);
+if (user != null && user.getUserEmail().equals(userEmail) && user.getUserPassword().equals(userPassword)) {
+    flag = true;
+}
         return flag;
     }
 
