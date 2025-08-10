@@ -24,7 +24,7 @@ public class UserService {
 
         boolean flag = false;
 
-        User user = userRepository.findByEmpEmailIdAndEmpPassword(userEmail, userPassword);
+        User user = userRepository.findByEmailAndPassword(userEmail, userPassword);
 
         if (user != null && user.getUserEmail().equals(userEmail) && user.getUserPassword().equals(userPassword)) {
             flag = true;
