@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebSocket Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>💬 WebSocket Chat</h1>
+      <div class="status" id="status">Disconnected</div>
+    </header>
+
+    <section class="join">
+      <input id="username" placeholder="Choose a nickname" autocomplete="off" />
+      <button id="connectBtn">Connect</button>
+      <button id="disconnectBtn" disabled>Disconnect</button>
+    </section>
+
+    <section class="chat">
+      <ul id="messages" class="messages"></ul>
+    </section>
+
+    <section class="composer">
+      <input id="messageInput" placeholder="Type a message..." disabled />
+      <button id="sendBtn" disabled>Send</button>
+    </section>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
