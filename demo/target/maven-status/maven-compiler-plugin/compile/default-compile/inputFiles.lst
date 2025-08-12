@@ -1,0 +1,10 @@
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\controller\MessageController.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\controller\UserController.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\DemoApplication.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\dto\CreateUserRequest.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\dto\LoginRequest.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\dto\SendMessageRequest.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\model\Message.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\model\User.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\repository\MessageRepository.java
+C:\Users\ranag\Documents\GitHub\chat-app\demo\src\main\java\com\example\demo\repository\UserRepository.java

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Mini Chat (Spring Boot + MongoDB)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Mini Chat</h1>
+    <div class="server">
+      <label>Backend URL</label>
+      <input id="baseUrl" value="http://localhost:8080" />
+      <button id="saveBaseUrl">Save</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Sign up a user</h2>
+      <form id="signupForm">
+        <div class="row">
+          <label>Username</label>
+          <input id="suUsername" required />
+        </div>
+        <div class="row">
+          <label>Email</label>
+          <input id="suEmail" type="email" required />
+        </div>
+        <button type="submit">Create</button>
+      </form>
+      <div class="hint">Creates via <code>POST /users</code>.</div>
+    </section>
+
+    <section class="card">
+      <h2>Send a message</h2>
+      <div class="row">
+        <label>Sender</label>
+        <select id="senderSelect"></select>
+      </div>
+      <div class="row">
+        <label>Recipient</label>
+        <select id="recipientSelect"></select>
+      </div>
+      <div class="row">
+        <label>Message</label>
+        <textarea id="messageInput" rows="3" placeholder="Type your message"></textarea>
+      </div>
+      <div class="actions">
+        <button id="sendBtn">Send</button>
+        <button id="refreshBtn" class="ghost">Refresh conversation</button>
+      </div>
+      <div class="hint">
+        Sends via <code>POST /messages</code> using IDs from the selects.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Conversation</h2>
+      <div id="conversation" class="conversation"></div>
+      <div class="hint">
+        Loads via <code>/messages/conversation?userAId=&amp;userBId=</code>.
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>
