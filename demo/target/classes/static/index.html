@@ -1,71 +1,104 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Mini Chat (Spring Boot + MongoDB)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <title>Chat App – WebSocket</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --accent:#22c55e; --danger:#ef4444; --text:#e5e7eb; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; background:var(--bg); color:var(--text); }
+    header { padding:16px 20px; background:#0b1224; border-bottom:1px solid #1f2937; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    header h1 { margin:0; font-size:18px; font-weight:600; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    input[type="text"], input[type="url"] {
+      background:#0b1020; border:1px solid #1f2937; color:var(--text);
+      padding:10px 12px; border-radius:10px; min-width:160px;
+    }
+    button {
+      border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
+      background:#1f2937; color:var(--text);
+    }
+    button.primary { background:var(--accent); color:#052e13; }
+    button.ghost { background:transparent; border:1px solid #1f2937; }
+    main { display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; }
+    @media (max-width: 900px) { main { grid-template-columns:1fr; } }
+    .card { background:var(--card); border:1px solid #1f2937; border-radius:14px; overflow:hidden; }
+    .card h2 { font-size:14px; text-transform:uppercase; letter-spacing:.06em; margin:0; padding:12px 14px; border-bottom:1px solid #1f2937; color:var(--muted); }
+    .card .content { padding:14px; display:grid; gap:10px; }
+    .muted { color:var(--muted); }
+    #chat { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+    #chat li { background:#0b1020; border:1px solid #1f2937; border-radius:12px; padding:10px 12px; }
+    #status { font-size:12px; }
+    .footer-inputs { display:flex; gap:10px; align-items:center; }
+    textarea {
+      background:#0b1020; border:1px solid #1f2937; color:var(--text);
+      padding:10px 12px; border-radius:10px; width:100%; min-height:44px; resize:vertical;
+    }
+    .pill { padding:4px 8px; border-radius:999px; border:1px solid #1f2937; background:#0b1020; font-size:12px; color:var(--muted); }
+    .flex { display:flex; gap:8px; align-items:center; }
+    .space { flex:1; }
+  </style>
 </head>
 <body>
   <header>
-    <h1>Mini Chat</h1>
-    <div class="server">
-      <label>Backend URL</label>
-      <input id="baseUrl" value="http://localhost:8080" />
-      <button id="saveBaseUrl">Save</button>
+    <h1>Chat App – WebSocket</h1>
+    <div class="row">
+      <label class="pill">Base URL</label>
+      <input type="url" id="baseUrl" value="http://localhost:8080" />
+      <button id="saveBaseUrl" class="ghost">Save</button>
+      <span id="status" class="muted">Not connected</span>
     </div>
   </header>
 
   <main>
+    <!-- Left: connection & identity -->
     <section class="card">
-      <h2>Sign up a user</h2>
-      <form id="signupForm">
+      <h2>Connection</h2>
+      <div class="content">
         <div class="row">
-          <label>Username</label>
-          <input id="suUsername" required />
+          <input id="me" type="text" placeholder="Your username (required)" />
+          <button id="connectBtn" class="primary">Connect</button>
+          <button id="disconnectBtn" class="ghost">Disconnect</button>
         </div>
         <div class="row">
-          <label>Email</label>
-          <input id="suEmail" type="email" required />
+          <span class="pill">Subscriptions</span>
+          <span class="muted" id="subsInfo">—</span>
         </div>
-        <button type="submit">Create</button>
-      </form>
-      <div class="hint">Creates via <code>POST /users</code>.</div>
-    </section>
-
-    <section class="card">
-      <h2>Send a message</h2>
-      <div class="row">
-        <label>Sender</label>
-        <select id="senderSelect"></select>
-      </div>
-      <div class="row">
-        <label>Recipient</label>
-        <select id="recipientSelect"></select>
-      </div>
-      <div class="row">
-        <label>Message</label>
-        <textarea id="messageInput" rows="3" placeholder="Type your message"></textarea>
-      </div>
-      <div class="actions">
-        <button id="sendBtn">Send</button>
-        <button id="refreshBtn" class="ghost">Refresh conversation</button>
-      </div>
-      <div class="hint">
-        Sends via <code>POST /messages</code> using IDs from the selects.
+        <p class="muted">
+          Tips: leave "To" empty to broadcast to the room (<code>/topic/messages</code>).
+          Set "To" to a username for a direct message (<code>/user/queue/messages</code>).
+        </p>
       </div>
     </section>
 
+    <!-- Right: chat -->
     <section class="card">
-      <h2>Conversation</h2>
-      <div id="conversation" class="conversation"></div>
-      <div class="hint">
-        Loads via <code>/messages/conversation?userAId=&amp;userBId=</code>.
+      <h2>Chat</h2>
+      <div class="content" style="padding-bottom:0;">
+        <div class="row">
+          <input id="to" type="text" placeholder="To (username, optional for broadcast)" />
+          <div class="space"></div>
+          <button id="clearBtn" class="ghost">Clear</button>
+        </div>
+
+        <ul id="chat"></ul>
+
+        <div class="content" style="border-top:1px solid #1f2937; margin-top:8px;">
+          <div class="footer-inputs">
+            <textarea id="msg" placeholder="Type a message..."></textarea>
+            <button id="sendBtn" class="primary">Send</button>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
-  <div id="toast" class="toast"></div>
-  <script src="script.js"></script>
+  <!-- SockJS + STOMP -->
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/dist/stomp.umd.min.js"></script>
+
+  <!-- App logic -->
+  <script src="./script.js"></script>
 </body>
 </html>

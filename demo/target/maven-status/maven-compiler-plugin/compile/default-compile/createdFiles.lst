@@ -1,9 +1,12 @@
 com\example\demo\DemoApplication.class
+com\example\demo\controller\ChatWsController.class
+com\example\demo\model\ChatMessage.class
 com\example\demo\controller\MessageController.class
 com\example\demo\dto\LoginRequest.class
 com\example\demo\model\User.class
 com\example\demo\dto\CreateUserRequest.class
 com\example\demo\repository\UserRepository.class
+com\example\chat\config\WebSocketConfig.class
 com\example\demo\model\Message.class
 com\example\demo\dto\SendMessageRequest.class
 com\example\demo\controller\UserController.class

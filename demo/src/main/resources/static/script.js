@@ -4,157 +4,168 @@ const saveBaseUrlBtn = document.getElementById('saveBaseUrl');
 let BASE_URL = localStorage.getItem('baseUrl') || baseUrlInput.value;
 
 // ====== UI ELEMENTS ======
-const signupForm = document.getElementById('signupForm');
-const suUsername = document.getElementById('suUsername');
-const suEmail = document.getElementById('suEmail');
+const meInput = document.getElementById('me');
+const toInput = document.getElementById('to');
+const msgInput = document.getElementById('msg');
 
-const senderSelect = document.getElementById('senderSelect');
-const recipientSelect = document.getElementById('recipientSelect');
-const messageInput = document.getElementById('messageInput');
+const connectBtn = document.getElementById('connectBtn');
+const disconnectBtn = document.getElementById('disconnectBtn');
 const sendBtn = document.getElementById('sendBtn');
-const refreshBtn = document.getElementById('refreshBtn');
+const clearBtn = document.getElementById('clearBtn');
 
-const conversationEl = document.getElementById('conversation');
-const toastEl = document.getElementById('toast');
+const chatEl = document.getElementById('chat');
+const statusEl = document.getElementById('status');
+const subsInfoEl = document.getElementById('subsInfo');
+
+// ====== STATE ======
+let stompClient = null;
+let subs = {
+  room: null,
+  inbox: null,
+};
 
 // ====== HELPERS ======
-function toast(msg, type = '') {
-  toastEl.textContent = msg;
-  toastEl.className = `toast show ${type}`;
-  setTimeout(() => toastEl.className = 'toast', 2000);
+function setStatus(txt) {
+  statusEl.textContent = txt;
 }
-async function api(path, opts = {}) {
-  const url = `${BASE_URL}${path}`;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-    ...opts,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(text || `${res.status} ${res.statusText}`);
-  }
-  const contentType = res.headers.get('content-type') || '';
-  return contentType.includes('application/json') ? res.json() : res.text();
+function appendMsg(text) {
+  const li = document.createElement('li');
+  li.textContent = text;
+  chatEl.appendChild(li);
+  chatEl.scrollTop = chatEl.scrollHeight;
 }
-function option(v, t) {
-  const o = document.createElement('option');
-  o.value = v; o.textContent = t; return o;
+function clearChat() {
+  chatEl.innerHTML = '';
+}
+function updateSubsInfo() {
+  const list = [];
+  if (subs.room) list.push('/topic/messages');
+  if (subs.inbox) list.push('/user/queue/messages');
+  subsInfoEl.textContent = list.length ? list.join(' , ') : '—';
 }
 
-// ====== USERS ======
-async function loadUsers() {
-  try {
-    const users = await api('/users');
-    senderSelect.innerHTML = '';
-    recipientSelect.innerHTML = '';
-    users.forEach(u => {
-      senderSelect.appendChild(option(u.id, `${u.username} (${u.email})`));
-      recipientSelect.appendChild(option(u.id, `${u.username} (${u.email})`));
-    });
-    if (users.length >= 2) {
-      // default sender 0, recipient 1
-      senderSelect.value = users[0].id;
-      recipientSelect.value = users[1].id;
-    }
-  } catch (e) {
-    toast('Failed to load users: ' + e.message, 'error');
-  }
-}
-
-signupForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  try {
-    const body = {
-      username: suUsername.value.trim(),
-      email: suEmail.value.trim(),
-    };
-    if (!body.username || !body.email) return;
-    await api('/users', { method: 'POST', body: JSON.stringify(body) });
-    toast('User created!', 'success');
-    suUsername.value = '';
-    suEmail.value = '';
-    await loadUsers();
-  } catch (e) {
-    const msg = e.message.includes('already exists') ? e.message : 'Could not create user';
-    toast(msg, 'error');
-  }
-});
-
-// ====== MESSAGES ======
-async function sendMessage() {
-  const senderId = senderSelect.value;
-  const recipientId = recipientSelect.value;
-  const content = messageInput.value.trim();
-  if (!senderId || !recipientId || !content) {
-    toast('Pick both users and write a message.', 'error');
-    return;
-  }
-  if (senderId === recipientId) {
-    toast('Sender and recipient must be different.', 'error');
-    return;
-  }
-  try {
-    await api('/messages', {
-      method: 'POST',
-      body: JSON.stringify({ senderId, recipientId, content })
-    });
-    messageInput.value = '';
-    toast('Message sent!', 'success');
-    await loadConversation();
-  } catch (e) {
-    toast('Send failed: ' + e.message, 'error');
-  }
-}
-
-async function loadConversation() {
-  const a = senderSelect.value;
-  const b = recipientSelect.value;
-  if (!a || !b) return;
-  try {
-    const items = await api(`/messages/conversation?userAId=${encodeURIComponent(a)}&userBId=${encodeURIComponent(b)}`);
-    renderConversation(items, a);
-  } catch (e) {
-    toast('Load conversation failed: ' + e.message, 'error');
-  }
-}
-
-function renderConversation(items, currentSenderId) {
-  conversationEl.innerHTML = '';
-  if (!Array.isArray(items) || items.length === 0) {
-    conversationEl.innerHTML = '<div class="hint">No messages yet. Say hi!</div>';
-    return;
-  }
-  items.forEach(m => {
-    const box = document.createElement('div');
-    box.className = 'msg ' + (m.senderId === currentSenderId ? 'me' : 'them');
-    const time = new Date(m.sentAt ?? Date.now()).toLocaleString();
-    box.innerHTML = `
-      <div>${escapeHtml(m.content)}</div>
-      <span class="meta">${time}</span>
-    `;
-    conversationEl.appendChild(box);
-  });
-}
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-// ====== EVENTS ======
-sendBtn.addEventListener('click', sendMessage);
-refreshBtn.addEventListener('click', loadConversation);
-
-senderSelect.addEventListener('change', loadConversation);
-recipientSelect.addEventListener('change', loadConversation);
-
+// ====== BASE URL PERSISTENCE ======
+baseUrlInput.value = BASE_URL;
 saveBaseUrlBtn.addEventListener('click', () => {
   BASE_URL = baseUrlInput.value.trim().replace(/\/+$/, '');
   localStorage.setItem('baseUrl', BASE_URL);
-  toast('Saved backend URL', 'success');
-  loadUsers().then(loadConversation);
+  appendMsg(`Base URL set to: ${BASE_URL}`);
 });
 
-// ====== INIT ======
-(function init() {
-  baseUrlInput.value = BASE_URL;
-  loadUsers().then(loadConversation);
-})();
+// ====== WEBSOCKET CONNECTION ======
+function connectWS() {
+  const me = meInput.value.trim();
+  if (!me) {
+    appendMsg('Please enter your username first.');
+    meInput.focus();
+    return;
+  }
+
+  // SockJS endpoint at /ws
+  const socket = new SockJS(`${BASE_URL}/ws`);
+
+  stompClient = new StompJs.Client({
+    webSocketFactory: () => socket,
+    reconnectDelay: 3000,
+    onConnect: () => {
+      setStatus('✅ Connected');
+      appendMsg('✅ Connected to broker');
+
+      // Subscribe to room (broadcast)
+      subs.room = stompClient.subscribe('/topic/messages', (frame) => {
+        try {
+          const msg = JSON.parse(frame.body);
+          appendMsg(`[ROOM] ${msg.from}: ${msg.text}`);
+        } catch {
+          appendMsg(`[ROOM] ${frame.body}`);
+        }
+        updateSubsInfo();
+      });
+
+      // Subscribe to personal queue
+      subs.inbox = stompClient.subscribe('/user/queue/messages', (frame) => {
+        try {
+          const msg = JSON.parse(frame.body);
+          appendMsg(`[DM to ${me}] ${msg.from}: ${msg.text}`);
+        } catch {
+          appendMsg(`[DM to ${me}] ${frame.body}`);
+        }
+        updateSubsInfo();
+      });
+
+      updateSubsInfo();
+    },
+    onStompError: (frame) => {
+      setStatus('⚠️ STOMP error');
+      appendMsg(`Broker error: ${frame.headers['message'] || 'unknown'}`);
+    },
+    onWebSocketClose: () => {
+      setStatus('❌ Disconnected');
+      appendMsg('❌ Disconnected');
+      cleanupSubs();
+    }
+  });
+
+  stompClient.activate();
+}
+
+function disconnectWS() {
+  if (stompClient) {
+    try { cleanupSubs(); } catch {}
+    stompClient.deactivate(); // async close
+  }
+}
+
+function cleanupSubs() {
+  if (subs.room) { try { subs.room.unsubscribe(); } catch {} subs.room = null; }
+  if (subs.inbox) { try { subs.inbox.unsubscribe(); } catch {} subs.inbox = null; }
+  updateSubsInfo();
+}
+
+// ====== SEND MESSAGE ======
+function sendMessage() {
+  if (!stompClient || !stompClient.active) {
+    appendMsg('Not connected.');
+    return;
+  }
+  const from = meInput.value.trim();
+  const to = toInput.value.trim();
+  const text = msgInput.value.trim();
+
+  if (!text) return;
+
+  const payload = JSON.stringify({
+    from,
+    to: to || null,
+    text,
+    timestamp: Date.now()
+  });
+
+  if (to) {
+    // Direct message -> handled by @MessageMapping("/chat.direct")
+    stompClient.publish({ destination: '/app/chat.direct', body: payload });
+  } else {
+    // Broadcast -> handled by @MessageMapping("/chat.send") + @SendTo("/topic/messages")
+    stompClient.publish({ destination: '/app/chat.send', body: payload });
+  }
+
+  msgInput.value = '';
+  msgInput.focus();
+}
+
+// ====== WIRE EVENTS ======
+connectBtn.addEventListener('click', connectWS);
+disconnectBtn.addEventListener('click', disconnectWS);
+sendBtn.addEventListener('click', sendMessage);
+clearBtn.addEventListener('click', clearChat);
+
+// Allow Enter to send (Shift+Enter for newline)
+msgInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// Optional: auto-connect if username is present and you want that behavior
+// window.addEve
